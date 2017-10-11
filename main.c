@@ -59,13 +59,25 @@ char** crearMatriz(int N, int M)
 
 void* ubicar (void* id)
 {
-
+	int* id1= (int*) id;
+	printf("Soy la hebra %d\n", *id1);
 }
 
 
 
 int main(int argc, char **argv)
 {
+	/*
+	i: Archivo de entrada
+	h: cantidad de hebras
+	c: cantidad de palabras
+	n: tamanio n
+	m: tamanio m
+	s: archivo de salida
+	d: mostrar por pantalla
+	*/
+
+
 	//Aqui declaramos las variables a recibir por medio de optarg
 	char* iName;
 	int hCant = 0;
@@ -141,6 +153,13 @@ int main(int argc, char **argv)
 	printf("Matriz N: %d M: %d\n", nMatriz, mMatriz);
 	printMatriz(matriz, nMatriz, mMatriz);
 
+	int i;
+	pthread_t id[10];
+	int id1 = 0;
+	for(i=0;i<10;i++)
+	{
+		pthread_create(&id[i],NULL,ubicar,(void*) &id1);
+	}
 
 
 
