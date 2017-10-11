@@ -5,6 +5,9 @@
 #include <string.h>
 #include <ctype.h>
 
+int N, M;
+
+
 struct structHebra
 {
 	pthread_t id;
@@ -14,6 +17,18 @@ struct structHebra
 	pthread_mutex_t mutex;
 } typedef Hebra;
 
+int verificarSize(char* palabra, int x)
+{
+	int sizePalabra = strlen(palabra);
+	if ((x + sizePalabra) >= N)
+	{
+		return 0;
+	}
+	else
+	{
+		return 1;
+	}
+}
 
 void printMatriz(char** matriz, int N, int M)
 {
@@ -47,11 +62,11 @@ char** crearMatriz(int N, int M)
 			return NULL;
 		}
 	}
-	for (i = 0;i < N; i++)
+	for (i = 0; i < N; i++)
 	{
 		for (j = 0; j < M; j++)
 		{
-			matriz[i][j] = 'c';
+			matriz[i][j] = ' ';
 		}
 	}
 	return matriz;
@@ -59,8 +74,9 @@ char** crearMatriz(int N, int M)
 
 void* ubicar (void* id)
 {
-	int* id1= (int*) id;
+	int* id1 = (int*) id;
 	printf("Soy la hebra %d\n", *id1);
+
 }
 
 
@@ -144,6 +160,8 @@ int main(int argc, char **argv)
 		printf ("Argumento no existente %s\n", argv[index]);
 	}
 
+	N = nMatriz;
+	M = mMatriz;
 	char** matriz = crearMatriz(nMatriz, mMatriz);
 	if (matriz == NULL)
 	{
@@ -156,13 +174,18 @@ int main(int argc, char **argv)
 	int i;
 	pthread_t id[10];
 	int id1 = 0;
-	for(i=0;i<10;i++)
+	for (i = 0; i < 10; i++)
 	{
-		pthread_create(&id[i],NULL,ubicar,(void*) &id1);
+		pthread_create(&id[i], NULL, ubicar, (void*) &id1);
+		id1++;
 	}
 
-
-
+	int palabrasPorProceso = palabras/hCant;
+	
+	for (i = 0; i < 10; i++)
+	{
+		pthread_join(id[i], NULL);
+	}
 
 
 
