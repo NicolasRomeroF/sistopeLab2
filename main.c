@@ -5,17 +5,21 @@
 #include <string.h>
 #include <ctype.h>
 
-int N, M;
-
-
 struct structHebra
 {
-	pthread_t id;
+	int id;
 	int x;
 	int y;
 	char** palabras;
-	pthread_mutex_t mutex;
 } typedef Hebra;
+
+
+int N, M;
+Hebra * hebras;
+pthread_mutex_t mutex;
+char** matriz;
+int palabrasPorProceso;
+
 
 int verificarSize(char* palabra, int x)
 {
@@ -72,12 +76,32 @@ char** crearMatriz(int N, int M)
 	return matriz;
 }
 
+void ubicarPalabra(char* palabra,int x){
+	int len=strlen(palabra);
+	int i;
+	for(i=x;i<len;i++){
+		matriz[x][i]=palabra[i-x];
+	}
+}
+
 void* ubicar (void* id)
 {
+	//SI NO ES LA ULTIMA HEBRA HACER ESTO
 	int* id1 = (int*) id;
 	printf("Soy la hebra %d\n", *id1);
+	Hebra hebra = hebras[*id1];
+	pthread_mutex_lock(&mutex);
+	int i;
+	for(i=0;i<palabrasPorProceso;i++){
+		hebra.x=rand()%N;
+		hebra.y=rand()%M;
+		if(verificarSize(hebra.palabras[i],hebra.x)){
+			ubicarPalabra(hebra.palabras[i],hebra.x);
+		}
+	}
 
 }
+
 
 
 
@@ -162,7 +186,7 @@ int main(int argc, char **argv)
 
 	N = nMatriz;
 	M = mMatriz;
-	char** matriz = crearMatriz(nMatriz, mMatriz);
+	matriz = crearMatriz(nMatriz, mMatriz);
 	if (matriz == NULL)
 	{
 		return -1;
@@ -170,22 +194,26 @@ int main(int argc, char **argv)
 
 	printf("Matriz N: %d M: %d\n", nMatriz, mMatriz);
 	printMatriz(matriz, nMatriz, mMatriz);
-
+	hebras=(Hebra*)malloc(sizeof(Hebra)*hCant);
 	int i;
 	pthread_t id[10];
 	int id1 = 0;
+	pthread_mutex_init(&mutex,NULL);
+	palabrasPorProceso = cCant/hCant;
+
 	for (i = 0; i < 10; i++)
 	{
+
+		hebras[i].id=i;
 		pthread_create(&id[i], NULL, ubicar, (void*) &id1);
 		id1++;
 	}
-
-	int palabrasPorProceso = palabras/hCant;
 	
 	for (i = 0; i < 10; i++)
 	{
 		pthread_join(id[i], NULL);
 	}
+	printMatriz(matriz,nMatriz,mMatriz);
 
 
 
