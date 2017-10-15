@@ -13,12 +13,15 @@ struct structHebra
 	char** palabras;
 } typedef Hebra;
 
+pthread_mutex_t identificador;
+
 
 int N, M;
 Hebra * hebras;
 pthread_mutex_t mutex;
 char** matriz;
 int palabrasPorProceso;
+FILE* salida;
 
 
 int verificarSize(char* palabra, int x)
@@ -102,6 +105,13 @@ void* ubicar (void* id)
 
 }
 
+void* identificar(void* id)
+{
+	
+	Hebra* hilo = (Hebra*)id;
+	printf("Soy la hebra %d\n",hilo->id);
+}
+
 
 
 
@@ -171,7 +181,7 @@ int main(int argc, char **argv)
 			}
 			return 1;
 		default:
-			abort ();
+			return 1;
 		}
 
 	}
@@ -195,24 +205,32 @@ int main(int argc, char **argv)
 	printf("Matriz N: %d M: %d\n", nMatriz, mMatriz);
 	printMatriz(matriz, nMatriz, mMatriz);
 	hebras=(Hebra*)malloc(sizeof(Hebra)*hCant);
+	printf("owo\n");
 	int i;
 	pthread_t id[10];
-	int id1 = 0;
-	pthread_mutex_init(&mutex,NULL);
-	palabrasPorProceso = cCant/hCant;
-
-	for (i = 0; i < 10; i++)
-	{
-
-		hebras[i].id=i;
-		pthread_create(&id[i], NULL, ubicar, (void*) &id1);
-		id1++;
-	}
 	
-	for (i = 0; i < 10; i++)
+	//palabrasPorProceso = cCant/hCant;
+
+	
+
+	printf("antes mutex\n");
+	for (i = 0; i < 10;i++)
 	{
-		pthread_join(id[i], NULL);
+
+		hebras[i].id = i;
+		pthread_create(&id[i], NULL, identificar, (void*) (&hebras[i]));
+		printf("i: %d\n",i);
 	}
+
+	printf("Fin creacion\n");
+
+	
+	/*for (i = 0; i < 10; i++)
+	{
+		int err =pthread_join(id[i], NULL);
+		printf("err: %d, id: %lu\n",err,id[i]);
+	}*/
+	printf("fin join\n");
 	printMatriz(matriz,nMatriz,mMatriz);
 
 
