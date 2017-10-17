@@ -197,6 +197,7 @@ int asignarPalabras(FILE* entrada, int cantPalabras, int palabrasPorHebra, int c
 	int cont = 0;
 	for (i = 0; i < cantHebras - 1; i++)
 	{
+		hebras[i].palabras = malloc(sizeof(*(hebras[i].palabras))*palabrasPorHebra);
 	
 		for (j = 0; j < palabrasPorHebra; j++)
 		{
@@ -205,7 +206,7 @@ int asignarPalabras(FILE* entrada, int cantPalabras, int palabrasPorHebra, int c
 			{
 				return 1;
 			}*/
-			hebras[i].palabras = malloc(sizeof(*(hebras[i].palabras))*palabrasPorHebra);
+			
 			strcpy(hebras[i].palabras[j], diccionario[cont]);
 			printf("hebrapalabra: %s diccionariocont: %s\n", hebras[i].palabras[j],diccionario[cont]);
 		
@@ -214,14 +215,14 @@ int asignarPalabras(FILE* entrada, int cantPalabras, int palabrasPorHebra, int c
 		
 	}
 	int resto = cantPalabras - (palabrasPorHebra * (cantHebras - 1));
-
+	hebras[cantHebras-1].palabras = malloc(sizeof(*(hebras[cantHebras-1].palabras))*resto);
 	for (j = 0; j < resto; j++)
 	{
 		/*if (mallocPalabras(resto, cantHebras - 1) == 1)
 		{
 			return 1;
 		}*/
-		hebras[cantHebras-1].palabras = malloc(sizeof(*(hebras[cantHebras-1].palabras))*resto);
+		
 		strcpy(hebras[cantHebras - 1].palabras[j], diccionario[cont]);
 		cont++;
 	}
