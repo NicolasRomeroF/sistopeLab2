@@ -19,16 +19,18 @@ struct structHebra
 int N, M;
 Hebra * hebras;
 pthread_mutex_t** matrizMutex;
+pthread_mutex_t bloquear, desbloquear;
 char** matriz;
 int palabrasPorProceso;
 FILE* salida;
 char (*diccionario)[128];
 
 
-int verificarSize(char* palabra, int x)
+
+int verificarSize(char* palabra, int y)
 {
 	int sizePalabra = strlen(palabra);
-	if ((x + sizePalabra) >= M)
+	if ((y + sizePalabra) >= M)
 	{
 		return 0;
 	}
@@ -42,9 +44,9 @@ int verificarVacio(char* palabra, int x, int y)
 {
 	int sizePalabra = strlen(palabra);
 	int i;
-	for (i = x; i < sizePalabra; i++)
+	for (i = y; i < sizePalabra+y; i++)
 	{
-		if (matriz[y][i] != ' ')
+		if (matriz[x][i] != ' ')
 		{
 			return 0;
 		}
@@ -54,12 +56,13 @@ int verificarVacio(char* palabra, int x, int y)
 
 void printMatriz(char** matriz, int N, int M)
 {
+	printf("Inicio Matriz\n");
 	int i, j;
 	for (i = 0; i < N; i++)
 	{
 		for (j = 0; j < M; j++)
 		{
-			printf("%c ", matriz[i][j]);
+			printf("%c", matriz[i][j]);
 		}
 		printf("\n");
 	}
@@ -115,11 +118,52 @@ pthread_mutex_t** crearMatrizMutex(int N, int M)
 	return matriz;
 }
 
-void ubicarPalabra(char* palabra, int x, int y) {
+pthread_mutex_t* crearListaMutex(int filas)
+{
+	pthread_mutex_t* listaMutexAux = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t) * filas);
+	if (listaMutexAux == NULL)
+	{
+		printf("ERROR: no se pudo asignar memoria a la lista de mutex\n");
+		return NULL;
+	}
+	return listaMutexAux;
+}
+
+void ubicarPalabra(char* palabra, int x, int y)
+{
 	int len = strlen(palabra);
+	printf("palabra: %s lenpalabra: %d\n",palabra,len);
 	int i;
-	for (i = x; i < len; i++) {
-		matriz[y][i] = palabra[i - x];
+	int cont = 0;
+	for (i = y; i < len+y; i++) {
+		matriz[x][i] = palabra[cont];
+		printf("caracter: %c\n",palabra[i - y]);
+		cont++;
+	}
+	printMatriz(matriz, N, M);
+}
+
+void bloquearMutex(int x, int y, int sizePalabra)
+{
+	int i;
+	if (y + sizePalabra < M)
+	{
+		for (i = y; i < sizePalabra; i++)
+		{
+			pthread_mutex_lock(&matrizMutex[x][i]);
+		}
+	}
+}
+
+void desbloquearMutex(int x, int y, int sizePalabra)
+{
+	int i;
+	if (y + sizePalabra < M)
+	{
+		for (i = y; i < sizePalabra; i++)
+		{
+			pthread_mutex_unlock(&matrizMutex[x][i]);
+		}
 	}
 }
 
@@ -128,14 +172,36 @@ void* ubicar (void* id)
 	//SI NO ES LA ULTIMA HEBRA HACER ESTO
 	Hebra* hilo = (Hebra*)id;
 	printf("Soy la hebra %d\n", hilo->id);
-	int i;
-	for (i = 0; i < palabrasPorProceso; i++) {
-		hilo->x = rand() % N;
-		hilo->y = rand() % M;
-		if (verificarSize(hilo->palabras[i], hilo->x) && verificarVacio(hilo->palabras[i], hilo->x, hilo->y)) {
-			ubicarPalabra(hilo->palabras[i], hilo->x, hilo->y);
+	int i = 0;
+	int validar = 1;
+	while (i < palabrasPorProceso) {
+		while (validar==1)
+		{
+			hilo->x = rand() % N;
+			hilo->y = rand() % M;
+			pthread_mutex_lock(&bloquear);
+			bloquearMutex(hilo->x, hilo->y, strlen(hilo->palabras[i]));
+			pthread_mutex_unlock(&bloquear);
+			printf("X: %d Y: %d lenpalabra: %d\n",hilo->x,hilo->y,strlen(hilo->palabras[i]));
+			if (verificarSize(hilo->palabras[i], hilo->y) && verificarVacio(hilo->palabras[i], hilo->x, hilo->y)) {
+				printf("Entro verificar----------------------------------------\n");
+				ubicarPalabra(hilo->palabras[i], hilo->x, hilo->y);
+				validar=0;
+			}
+			else
+			{
+				printf("No entro verificar----------------------------------------\n");
+			}
+			pthread_mutex_lock(&desbloquear);
+			desbloquearMutex(hilo->x, hilo->y, strlen(hilo->palabras[i]));
+			pthread_mutex_unlock(&desbloquear);
 		}
+		printf("inserte: %s\n",hilo->palabras[i]);
+		validar=1;
+		i++;
 	}
+
+	//HACEEER CASO PARA ULTIMAAAAA HEBRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 }
 
@@ -171,13 +237,13 @@ void* identificar(void* id)
 
 void leerArchivo(FILE* entrada, int cantPalabras)
 {
-	diccionario=malloc(sizeof(*diccionario)*cantPalabras);
+	diccionario = malloc(sizeof(*diccionario) * cantPalabras);
 	char buffer[128];
 	int i;
-	for(i=0;i<cantPalabras;i++)
-	{	
-		fscanf(entrada,"%s",buffer);
-		strcpy(diccionario[i],buffer);
+	for (i = 0; i < cantPalabras; i++)
+	{
+		fscanf(entrada, "%s", buffer);
+		strcpy(diccionario[i], buffer);
 	}
 }
 
@@ -185,9 +251,9 @@ void printDiccionario(int cantPalabras)
 {
 	int i;
 	printf("Diccionario: \n");
-	for(i=0;i<cantPalabras;i++)
+	for (i = 0; i < cantPalabras; i++)
 	{
-		printf("%s\n",diccionario[i]);
+		printf("%s\n", diccionario[i]);
 	}
 }
 
@@ -197,8 +263,8 @@ int asignarPalabras(FILE* entrada, int cantPalabras, int palabrasPorHebra, int c
 	int cont = 0;
 	for (i = 0; i < cantHebras - 1; i++)
 	{
-		hebras[i].palabras = malloc(sizeof(*(hebras[i].palabras))*palabrasPorHebra);
-	
+		hebras[i].palabras = malloc(sizeof(*(hebras[i].palabras)) * palabrasPorHebra);
+
 		for (j = 0; j < palabrasPorHebra; j++)
 		{
 			printf("i: %d j: %d\n", i, j);
@@ -206,28 +272,42 @@ int asignarPalabras(FILE* entrada, int cantPalabras, int palabrasPorHebra, int c
 			{
 				return 1;
 			}*/
-			
+
 			strcpy(hebras[i].palabras[j], diccionario[cont]);
-			printf("hebrapalabra: %s diccionariocont: %s\n", hebras[i].palabras[j],diccionario[cont]);
-		
+			printf("hebrapalabra: %s diccionariocont: %s\n", hebras[i].palabras[j], diccionario[cont]);
+
 			cont++;
 		}
-		
+
 	}
 	int resto = cantPalabras - (palabrasPorHebra * (cantHebras - 1));
-	hebras[cantHebras-1].palabras = malloc(sizeof(*(hebras[cantHebras-1].palabras))*resto);
+	hebras[cantHebras - 1].palabras = malloc(sizeof(*(hebras[cantHebras - 1].palabras)) * resto);
 	for (j = 0; j < resto; j++)
 	{
 		/*if (mallocPalabras(resto, cantHebras - 1) == 1)
 		{
 			return 1;
 		}*/
-		
+
 		strcpy(hebras[cantHebras - 1].palabras[j], diccionario[cont]);
 		cont++;
 	}
 
 	return 0;
+}
+
+void mutexInit()
+{
+	int i, j;
+	for (i = 0; i < N; i++)
+	{
+		for (j = 0; j < M; j++)
+		{
+			pthread_mutex_init(&matrizMutex[i][j], NULL);
+		}
+	}
+	pthread_mutex_init(&bloquear, NULL);
+	pthread_mutex_init(&desbloquear, NULL);
 }
 
 
@@ -339,6 +419,13 @@ int main(int argc, char **argv)
 	M = mMatriz;
 	matriz = crearMatriz(nMatriz, mMatriz);
 	matrizMutex = crearMatrizMutex(nMatriz, mMatriz);
+	if (matrizMutex == NULL)
+	{
+		return -1;
+	}
+
+
+	mutexInit();
 
 	if (matriz == NULL || matrizMutex == NULL )
 	{
@@ -358,9 +445,9 @@ int main(int argc, char **argv)
 	hebras = (Hebra*)malloc(sizeof(Hebra) * hCant);
 
 	palabrasPorProceso = cCant / hCant;
-	printf("antes asignar\n");
-	leerArchivo(entrada,cCant);
-	printDiccionario(cCant);
+
+	leerArchivo(entrada, cCant);
+	//printDiccionario(cCant);
 	if (asignarPalabras(entrada, cCant, palabrasPorProceso, hCant) == 1)
 	{
 		return -1;
@@ -368,36 +455,33 @@ int main(int argc, char **argv)
 
 
 	fclose(entrada);
-	printPalabras(cCant, palabrasPorProceso, hCant);
+	//printPalabras(cCant, palabrasPorProceso, hCant);
 
 
-	printf("owo\n");
+	//rintf("owo\n");
 	int i;
 	pthread_t id[10];
 
-	//
 
 
 
-	printf("antes mutex\n");
-	/*for (i = 0; i < 10; i++)
+	for (i = 0; i < hCant; i++)
 	{
 
 		hebras[i].id = i;
-		pthread_create(&id[i], NULL, identificar, (void*) (&hebras[i]));
-		printf("i: %d\n", i);
-	}*/
-	
+		pthread_create(&id[i], NULL, ubicar, (void*) (&hebras[i]));
+		//printf("i: %d\n", i);
+	}
 
-	printf("Fin creacion\n");
 
-	/*for (i = 0; i < 10; i++)
+	//printf("Fin creacion\n");
+
+	for (i = 0; i < hCant; i++)
 	{
 		int err =pthread_join(id[i], NULL);
-		printf("err: %d, id: %lu\n",err,id[i]);
-	}*/
-	printf("fin join\n");
-	//printMatriz(matriz, nMatriz, mMatriz);
+		//printf("err: %d, id: %lu\n",err,id[i]);
+	}
+	printMatriz(matriz, nMatriz, mMatriz);
 
 
 
