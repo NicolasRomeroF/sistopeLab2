@@ -10,7 +10,7 @@ struct structHebra
 	int id;
 	int x;
 	int y;
-	char (*palabras)[48];
+	char (*palabras)[128];
 } typedef Hebra;
 
 
@@ -22,6 +22,7 @@ pthread_mutex_t** matrizMutex;
 char** matriz;
 int palabrasPorProceso;
 FILE* salida;
+char (*diccionario)[128];
 
 
 int verificarSize(char* palabra, int x)
@@ -147,7 +148,7 @@ void* identificar(void* id)
 
 /*int mallocPalabras(int size, int id)
 {
-	hebras[id].palabras = (char**)malloc(sizeof(char*)*size);
+	hebras[id].palabras = (char**)malloc(sizeof(char*)*128);
 
 	if (hebras[id].palabras == NULL)
 	{
@@ -158,7 +159,7 @@ void* identificar(void* id)
 	int i;
 	for (i = 0; i < size; i++)
 	{
-		hebras[id].palabras[i] = (char*)malloc(sizeof(char) * 64);
+		hebras[id].palabras[i] = (char*)malloc(sizeof(char) * size);
 		if (hebras[id].palabras[i] == NULL)
 		{
 			printf("No se puedo asignar memoria a palabras");
@@ -168,43 +169,66 @@ void* identificar(void* id)
 	return 0;
 }*/
 
+void leerArchivo(FILE* entrada, int cantPalabras)
+{
+	diccionario=malloc(sizeof(*diccionario)*cantPalabras);
+	char buffer[128];
+	int i;
+	for(i=0;i<cantPalabras;i++)
+	{	
+		fscanf(entrada,"%s",buffer);
+		strcpy(diccionario[i],buffer);
+	}
+}
+
+void printDiccionario(int cantPalabras)
+{
+	int i;
+	printf("Diccionario: \n");
+	for(i=0;i<cantPalabras;i++)
+	{
+		printf("%s\n",diccionario[i]);
+	}
+}
+
 int asignarPalabras(FILE* entrada, int cantPalabras, int palabrasPorHebra, int cantHebras)
 {
 	int i, j;
-	char buffer[128];
+	int cont = 0;
 	for (i = 0; i < cantHebras - 1; i++)
 	{
+	
 		for (j = 0; j < palabrasPorHebra; j++)
 		{
 			printf("i: %d j: %d\n", i, j);
-			fscanf(entrada, "%s", buffer);
-			printf("%s\n", buffer);
 			/*if (mallocPalabras(palabrasPorHebra, i) == 1)
 			{
 				return 1;
 			}*/
-			hebras[i].palabras = malloc(sizeof(*hebras[i].palabras)*palabrasPorHebra);
-			strcpy(hebras[i].palabras[j], buffer);
-			printf("hebrapalabra: %s\n", hebras[i].palabras[j]);
-
+			hebras[i].palabras = malloc(sizeof(*(hebras[i].palabras))*palabrasPorHebra);
+			strcpy(hebras[i].palabras[j], diccionario[cont]);
+			printf("hebrapalabra: %s diccionariocont: %s\n", hebras[i].palabras[j],diccionario[cont]);
+		
+			cont++;
 		}
+		
 	}
-
 	int resto = cantPalabras - (palabrasPorHebra * (cantHebras - 1));
 
 	for (j = 0; j < resto; j++)
 	{
-		fscanf(entrada, "%s", buffer);
 		/*if (mallocPalabras(resto, cantHebras - 1) == 1)
 		{
 			return 1;
 		}*/
-		hebras[cantHebras-1].palabras = malloc(sizeof(*hebras[cantHebras-1].palabras)*resto);
-		strcpy(hebras[cantHebras - 1].palabras[j], buffer);
+		hebras[cantHebras-1].palabras = malloc(sizeof(*(hebras[cantHebras-1].palabras))*resto);
+		strcpy(hebras[cantHebras - 1].palabras[j], diccionario[cont]);
+		cont++;
 	}
 
 	return 0;
 }
+
 
 void printPalabras(int cantPalabras, int palabrasPorHebra, int cantHebras)
 {
@@ -334,11 +358,18 @@ int main(int argc, char **argv)
 
 	palabrasPorProceso = cCant / hCant;
 	printf("antes asignar\n");
+	leerArchivo(entrada,cCant);
+	printDiccionario(cCant);
 	if (asignarPalabras(entrada, cCant, palabrasPorProceso, hCant) == 1)
 	{
 		return -1;
 	}
+
+
+	fclose(entrada);
 	printPalabras(cCant, palabrasPorProceso, hCant);
+
+
 	printf("owo\n");
 	int i;
 	pthread_t id[10];
@@ -348,13 +379,14 @@ int main(int argc, char **argv)
 
 
 	printf("antes mutex\n");
-	for (i = 0; i < 10; i++)
+	/*for (i = 0; i < 10; i++)
 	{
 
 		hebras[i].id = i;
 		pthread_create(&id[i], NULL, identificar, (void*) (&hebras[i]));
 		printf("i: %d\n", i);
-	}
+	}*/
+	
 
 	printf("Fin creacion\n");
 
@@ -364,7 +396,7 @@ int main(int argc, char **argv)
 		printf("err: %d, id: %lu\n",err,id[i]);
 	}*/
 	printf("fin join\n");
-	printMatriz(matriz, nMatriz, mMatriz);
+	//printMatriz(matriz, nMatriz, mMatriz);
 
 
 
