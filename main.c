@@ -136,7 +136,7 @@ void ubicarPalabra(char* palabra, int x, int y)
 	int i;
 	int cont = 0;
 	for (i = y; i < len+y; i++) {
-		matriz[x][i] = palabra[cont];
+		matriz[x][i] = toupper(palabra[cont]);
 		printf("caracter: %c\n",palabra[i - y]);
 		cont++;
 	}
@@ -203,6 +203,20 @@ void* ubicar (void* id)
 
 	//HACEEER CASO PARA ULTIMAAAAA HEBRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
+}
+
+void completarMatriz(){
+	int i,j;
+	for (i = 0; i < N; i++)
+	{
+		for(j=0;j<M;j++)
+		{
+			if(matriz[i][j]==' '){
+				char c= 'a' + rand() % (('z' - 'a') + 1);
+				matriz[i][j]=c;
+			}
+		}
+	}
 }
 
 void* identificar(void* id)
@@ -414,7 +428,7 @@ int main(int argc, char **argv)
 	for (index = optind; index < argc; index++) {
 		printf ("Argumento no existente %s\n", argv[index]);
 	}
-
+	srand(time(NULL));
 	N = nMatriz;
 	M = mMatriz;
 	matriz = crearMatriz(nMatriz, mMatriz);
