@@ -7,6 +7,7 @@ struct structHebra
 	int x;
 	int y;
 	char (*palabras)[128];
+	int cantPalabras;
 } typedef Hebra;
 
 #endif
