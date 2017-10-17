@@ -54,9 +54,40 @@ int verificarVacio(char* palabra, int x, int y)
 	return 1;
 }
 
+void mayusculas(char* palabra)
+{
+    int i;
+    for(i=0;i<strlen(palabra);i++){
+        palabra[i]=toupper(palabra[i]);
+    }
+}
+
+char letraRandom()
+{
+	char c;
+    c = rand()%26;
+    c+=97;
+    return c;
+}
+
+void rellenarMatriz()
+{
+	int i,j;
+	for(i=0;i<N;i++)
+	{
+		for(j=0;j<M;j++)
+		{
+			if(matriz[i][j]==' ')
+			{
+				matriz[i][j]=letraRandom();
+			}
+		}
+	}
+}
+
 void printMatriz(char** matriz, int N, int M)
 {
-	printf("Inicio Matriz\n");
+	printf("\nInicio Matriz\n\n");
 	int i, j;
 	for (i = 0; i < N; i++)
 	{
@@ -66,7 +97,7 @@ void printMatriz(char** matriz, int N, int M)
 		}
 		printf("\n");
 	}
-	printf("Fin print\n");
+	printf("\nFin Matriz\n");
 }
 
 char** crearMatriz(int N, int M)
@@ -134,13 +165,16 @@ void ubicarPalabra(char* palabra, int x, int y)
 	int len = strlen(palabra);
 	printf("palabra: %s lenpalabra: %d\n",palabra,len);
 	int i;
+	mayusculas(palabra);
+	printf("palabra: %s lenpalabra: %d\n",palabra,len);
 	int cont = 0;
 	for (i = y; i < len+y; i++) {
-		matriz[x][i] = toupper(palabra[cont]);
+		matriz[x][i] = palabra[cont];
 		printf("caracter: %c\n",palabra[i - y]);
 		cont++;
+		printMatriz(matriz, N, M);
 	}
-	printMatriz(matriz, N, M);
+	
 }
 
 void bloquearMutex(int x, int y, int sizePalabra)
@@ -148,9 +182,10 @@ void bloquearMutex(int x, int y, int sizePalabra)
 	int i;
 	if (y + sizePalabra < M)
 	{
-		for (i = y; i < sizePalabra; i++)
+		for (i = y; i < sizePalabra+y; i++)
 		{
 			pthread_mutex_lock(&matrizMutex[x][i]);
+			printf("mutex bloquear x: %d i: %d ",x,i);
 		}
 	}
 }
@@ -160,9 +195,10 @@ void desbloquearMutex(int x, int y, int sizePalabra)
 	int i;
 	if (y + sizePalabra < M)
 	{
-		for (i = y; i < sizePalabra; i++)
+		for (i = y; i < sizePalabra+y; i++)
 		{
 			pthread_mutex_unlock(&matrizMutex[x][i]);
+			printf("mutex desbloquear x: %d i: %d ",x,i);
 		}
 	}
 }
@@ -203,20 +239,6 @@ void* ubicar (void* id)
 
 	//HACEEER CASO PARA ULTIMAAAAA HEBRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
-}
-
-void completarMatriz(){
-	int i,j;
-	for (i = 0; i < N; i++)
-	{
-		for(j=0;j<M;j++)
-		{
-			if(matriz[i][j]==' '){
-				char c= 'a' + rand() % (('z' - 'a') + 1);
-				matriz[i][j]=c;
-			}
-		}
-	}
 }
 
 void* identificar(void* id)
@@ -428,7 +450,7 @@ int main(int argc, char **argv)
 	for (index = optind; index < argc; index++) {
 		printf ("Argumento no existente %s\n", argv[index]);
 	}
-	srand(time(NULL));
+
 	N = nMatriz;
 	M = mMatriz;
 	matriz = crearMatriz(nMatriz, mMatriz);
@@ -453,7 +475,7 @@ int main(int argc, char **argv)
 	}
 
 
-
+	
 	printf("Matriz N: %d M: %d\n", nMatriz, mMatriz);
 	printMatriz(matriz, nMatriz, mMatriz);
 	hebras = (Hebra*)malloc(sizeof(Hebra) * hCant);
@@ -477,7 +499,7 @@ int main(int argc, char **argv)
 	pthread_t id[10];
 
 
-
+	srand(time(NULL));
 
 	for (i = 0; i < hCant; i++)
 	{
@@ -495,6 +517,8 @@ int main(int argc, char **argv)
 		int err =pthread_join(id[i], NULL);
 		//printf("err: %d, id: %lu\n",err,id[i]);
 	}
+	
+	//rellenarMatriz();
 	printMatriz(matriz, nMatriz, mMatriz);
 
 
