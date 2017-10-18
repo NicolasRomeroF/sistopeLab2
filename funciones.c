@@ -18,6 +18,11 @@ char (*diccionario)[128];
 int dPrint;
 
 void printMatrizArchivo(FILE* salida, char** matriz, int N, int M)
+/*
+	Funcion que se encarga de escribir en el archivo de salida
+	la sopa de letras con las palabras insertadas
+	Recibe el archivo de salida, la matriz de chars (sopa de letras) y sus dimensiones
+*/
 {
 	int i, j;
 	for (i = 0; i < N; i++)
@@ -31,6 +36,12 @@ void printMatrizArchivo(FILE* salida, char** matriz, int N, int M)
 }
 
 int verificarSize(char* palabra, int y)
+/*
+	Función que verifica que la palabra sumada con su posicion inicial para ubicarla en la matriz
+	Recibe la palabra y la coordenada Y inicial 
+	Si no hay espacio suficiente, devuelve 0
+	En caso contrario, devuelve 1
+*/
 {
 	int sizePalabra = strlen(palabra);
 	if ((y + sizePalabra) >= M)
@@ -44,6 +55,13 @@ int verificarSize(char* palabra, int y)
 }
 
 int verificarVacio(char* palabra, int x, int y)
+/*
+	Función que verifica que los espacios en que se escribira la palabra contengan todos el caracter espacio,
+	lo que significa que no hay ninguna otra palabra escrita en esa posicion
+	Recibe la palabra y las coordenadas X e Y de inicio
+	Devuelve 0 en caso que no sea valida la ubicacion
+	En caso contrario, devuelve 1
+*/
 {
 	int sizePalabra = strlen(palabra);
 	int i;
@@ -58,6 +76,10 @@ int verificarVacio(char* palabra, int x, int y)
 }
 
 void mayusculas(char* palabra)
+/*
+	Funcion que pone la palabra en mayusculas
+	Recibe la palabra
+*/
 {
 	int i;
 	for (i = 0; i < strlen(palabra); i++) {
@@ -66,6 +88,10 @@ void mayusculas(char* palabra)
 }
 
 char letraRandom()
+/*
+	Funcion que genera un caracter aleatorio entre la letra a y la z
+	Devuelve el caracter
+*/
 {
 	char c;
 	c = rand() % 26;
@@ -74,6 +100,10 @@ char letraRandom()
 }
 
 void rellenarMatriz()
+/*
+	Funcion que se encarga de completar los espacios vacios de la sopa de letras
+	con caracteres aleatorios
+*/
 {
 	int i, j;
 	for (i = 0; i < N; i++)
@@ -89,6 +119,10 @@ void rellenarMatriz()
 }
 
 void printMatriz(char** matriz, int N, int M)
+/*
+	Funcion que se encarga de mostrar la sopa de letras por pantalla
+	Recibe la matriz (sopa de letras) y sus dimensiones
+*/
 {
 	printf("\nInicio Matriz\n\n");
 	int i, j;
@@ -104,6 +138,12 @@ void printMatriz(char** matriz, int N, int M)
 }
 
 char** crearMatriz(int N, int M)
+/*
+	Funcion que se encarga de crear la matriz en la que se insertarán las palabras
+	Recibe las dimensiones de la matriz
+	Devuelve la matriz de caracteres llena con chars "espacio" en caso de que se pueda asignar la memoria requerida
+	En caso contrario, deuelve NULL
+*/
 {
 	char** matriz = (char**)malloc(sizeof(char*)*N);
 	int i, j;
@@ -132,6 +172,12 @@ char** crearMatriz(int N, int M)
 }
 
 pthread_mutex_t** crearMatrizMutex(int N, int M)
+/*
+	Funcion que se encarga de crear la matriz de mutex
+	Recibe las dimensiones de la matriz
+	Devuelve la matriz de mutex en caso de que se pueda asignar la memoria requerida
+	En caso contrario, devuelve NULL
+*/
 {
 	pthread_mutex_t** matriz = (pthread_mutex_t**)malloc(sizeof(pthread_mutex_t*)*N);
 	int i;
@@ -155,6 +201,10 @@ pthread_mutex_t** crearMatrizMutex(int N, int M)
 
 
 void ubicarPalabra(char* palabra, int x, int y)
+/*
+	Funcion que se encarga de poner la palabra en la sopa de letras
+	Recibe la palabra y las coordenadas en que se posicionará
+*/
 {
 	int len = strlen(palabra);
 	int i;
@@ -167,6 +217,10 @@ void ubicarPalabra(char* palabra, int x, int y)
 	}
 	if (dPrint == 1)
 	{
+		/*
+			Aqui se usa un mutex para evitar que se ejecuten de multiples hebras simultaneamnte
+			la funcion printMatriz, para evitar inconcistencias en la consola
+		*/
 		pthread_mutex_lock(&printear);
 		printf("Se inserto la palabra: %s\n", palabra);
 		printMatriz(matriz, N, M);
@@ -175,6 +229,10 @@ void ubicarPalabra(char* palabra, int x, int y)
 }
 
 void bloquearMutex(int x, int y, int sizePalabra)
+/*
+	Función que se encarga de bloquear los mutex en los que se posicionará una palabra
+	Recibe las coordenadas de inicio y el tamaño de la palabra
+*/
 {
 	int i;
 	if (y + sizePalabra < M)
@@ -187,6 +245,10 @@ void bloquearMutex(int x, int y, int sizePalabra)
 }
 
 void desbloquearMutex(int x, int y, int sizePalabra)
+/*
+	Función que se encarga de desbloquear los mutex en los que se posicionó una palabra
+	Recibe las coordenadas de inicio y el tamaño de la palabra
+*/
 {
 	int i;
 	if (y + sizePalabra < M)
@@ -199,8 +261,12 @@ void desbloquearMutex(int x, int y, int sizePalabra)
 }
 
 void* ubicar (void* id)
+/*
+	Funcion ejecutada por las múltiples hebras que se encarga de ubicar las palabras en la matriz sopa de letras
+	Recibe un id de tipo Hebra
+
+*/
 {
-	//SI NO ES LA ULTIMA HEBRA HACER ESTO
 	Hebra* hilo = (Hebra*)id;
 	int i = 0;
 	int validar = 1;
@@ -209,14 +275,17 @@ void* ubicar (void* id)
 		{
 			hilo->x = rand() % N;
 			hilo->y = rand() % M;
+			//EnterSC()
 			pthread_mutex_lock(&bloquear);
 			bloquearMutex(hilo->x, hilo->y, strlen(hilo->palabras[i]));
 			pthread_mutex_unlock(&bloquear);
+			//SC()
 			if (verificarSize(hilo->palabras[i], hilo->y) && verificarVacio(hilo->palabras[i], hilo->x, hilo->y)) {
 
 				ubicarPalabra(hilo->palabras[i], hilo->x, hilo->y);
 				validar = 0;
 			}
+			//ExitSC()
 			pthread_mutex_lock(&desbloquear);
 			desbloquearMutex(hilo->x, hilo->y, strlen(hilo->palabras[i]));
 			pthread_mutex_unlock(&desbloquear);
@@ -225,11 +294,13 @@ void* ubicar (void* id)
 		i++;
 	}
 
-	//HACEEER CASO PARA ULTIMAAAAA HEBRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-
 }
 
 void* identificar(void* id)
+/*
+	Funcion que se encarga de mostrar por pantalla el id de la hebra que se esta ejecutando
+	REcibe un id que corresponde a una Hebra
+*/
 {
 
 	Hebra* hilo = (Hebra*)id;
@@ -238,6 +309,10 @@ void* identificar(void* id)
 
 
 void leerArchivo(FILE* entrada, int cantPalabras)
+/*
+	Funcion que se encarga de leer el archivo de entrada y guardar las palabras en el diccionario
+	REcibe el archivo de entrada y la cantidad de palabras que este contiene
+*/
 {
 	diccionario = malloc(sizeof(*diccionario) * cantPalabras);
 	char buffer[128];
@@ -250,6 +325,10 @@ void leerArchivo(FILE* entrada, int cantPalabras)
 }
 
 void printDiccionario(int cantPalabras)
+/*
+	Funcion que se encarga de mostrar por consola el contenido del diccionario
+	REcibe la cantidad de palabras que contiene éste
+*/
 {
 	int i;
 	printf("Diccionario: \n");
