@@ -17,6 +17,7 @@ FILE* salida;
 char (*diccionario)[128];
 int dPrint;
 
+
 void printMatrizArchivo(FILE* salida, char** matriz, int N, int M)
 {
 	int i, j;
@@ -259,6 +260,11 @@ void printDiccionario(int cantPalabras)
 	}
 }
 
+/*Funcion que asigna a cada estructura las palabras que debe escribir
+  Entradas: Archivo de entrada, Cantidad de palabras, Cantidad de palabras por hebra,
+           Cantidad de hebras
+  Salidas: Entero que indica exito o fracaso al asignar palabras
+  */
 int asignarPalabras(FILE* entrada, int cantPalabras, int palabrasPorHebra, int cantHebras)
 {
 	int i, j;
@@ -300,6 +306,8 @@ int asignarPalabras(FILE* entrada, int cantPalabras, int palabrasPorHebra, int c
 	return 0;
 }
 
+/*Funcion que inicializa todos los mutex ocupados
+*/
 void mutexInit()
 {
 	int i, j;
@@ -315,7 +323,12 @@ void mutexInit()
 	pthread_mutex_init(&printear, NULL);
 }
 
-
+/*Funcion que imprime por pantalla las palabras asignadas, indicando a que
+  hebras pertenecen
+  Entradas: Cantidad de palabras, Cantidad de palabras por hebra, Cantidad
+            de hebras
+  Salidas:void
+  */
 void printPalabras(int cantPalabras, int palabrasPorHebra, int cantHebras)
 {
 	int i, j;
@@ -340,13 +353,19 @@ void printPalabras(int cantPalabras, int palabrasPorHebra, int cantHebras)
 	}
 }
 
+/*Funcion que entrega el tamanio de la palabra mas larga
+  Entradas: Cantidad de palabras
+  Salidas: Largo de la palabra mas larga
+  */
 int sizePalabraLarga(int cantPalabras)
 {
 	int max = 0;
 	int i, largo;
+	char* palabra;
 	for (i = 0; i < cantPalabras; i++)
 	{
-		largo = strlen(diccionario[i]);
+		palabra = diccionario[i];
+		largo = strlen(palabra);
 		if (largo > max)
 		{
 			max = largo;
@@ -355,6 +374,10 @@ int sizePalabraLarga(int cantPalabras)
 	return max;
 }
 
+/*Funcion que comprueba que las entradas dadas mediante getopt sean validas
+  Entradas: cantidad de hebras, cantidad de palabras, cantidad de filas de la matriz
+            cantidad de columnas de la funcion
+  Salida: entero que indica si las entradas son validas o no*/
 int comprobarEntradas(int cantHebras, int cantPalabras, int sizeN, int sizeM)
 {
 	if (cantHebras < 1)
@@ -370,7 +393,7 @@ int comprobarEntradas(int cantHebras, int cantPalabras, int sizeN, int sizeM)
 	if (sizeN < 1 || sizeM < 1)
 	{
 		printf("Las dimensiones de la matriz deben ser mayores o iguales a 1\n");
-		
+
 		return 0;
 	}
 	if (cantPalabras > sizeN)
@@ -378,16 +401,34 @@ int comprobarEntradas(int cantHebras, int cantPalabras, int sizeN, int sizeM)
 		printf("Es necesario que la cantidad de filas de la matriz sea igual o mayor a la cantidad de palabras\n");
 		return 0;
 	}
-	/*if(sizePalabraLarga(cantPalabras)>sizeM)
+	if (sizePalabraLarga(cantPalabras) > sizeM)
 	{
-		
+
 		printf("Existe una o mas palabras que no caben horizontalmente en la matriz\n");
 		return 0;
-	}	*/
+	}
 
 	return 1;
 }
 
+/* Funcion que libera la memoria de las matrices de caracteres
+   y de mutex
+   */
+void freeMatrices()
+{
+	int i;
+	for(i=0;i<N;i++)
+	{
+		free(matriz[i]);
+		free(matrizMutex[i]);
+	}
+	free(matriz);
+	free(matrizMutex);
+}
+
+
+/*Funcion inicial desde la cual se inicializan todas las varibles
+*/
 int inicio(int argc, char **argv)
 {
 	/*
@@ -467,33 +508,7 @@ int inicio(int argc, char **argv)
 		printf ("Argumento no existente %s\n", argv[index]);
 	}
 
-	if (comprobarEntradas(hCant, cCant, nMatriz, mMatriz) != 1)
-	{
-		return -1;
-	}
-
-	if (hCant > cCant)
-	{
-		hCant = cCant;
-	}
-	N = nMatriz;
-	M = mMatriz;
-	dPrint = dFlag;
-
-	matriz = crearMatriz(nMatriz, mMatriz);
-	matrizMutex = crearMatrizMutex(nMatriz, mMatriz);
-	if (matrizMutex == NULL)
-	{
-		return -1;
-	}
-
-
-	mutexInit();
-
-	if (matriz == NULL || matrizMutex == NULL )
-	{
-		return -1;
-	}
+	//Se abre archivo de entrada
 	FILE* entrada = fopen(iName, "r");
 	if (entrada == NULL)
 	{
@@ -501,6 +516,43 @@ int inicio(int argc, char **argv)
 		return -1;
 	}
 
+	//Se lee el archivo de entrada y se crea el diccionario
+	leerArchivo(entrada, cCant);
+
+	//Se comprueba que las entradas dadas sean validas
+	if (comprobarEntradas(hCant, cCant, nMatriz, mMatriz) != 1)
+	{
+		return -1;
+	}
+
+	//En caso de que hayan mas hebras que palabras
+	if (hCant > cCant)
+	{
+		hCant = cCant;
+	}
+	//Se asignan a variables globales
+	N = nMatriz;
+	M = mMatriz;
+	dPrint = dFlag;
+
+	//Se crea matriz de char con espacios
+	matriz = crearMatriz(nMatriz, mMatriz);
+	//Se asigna memoria a la matriz de mutex;
+	matrizMutex = crearMatrizMutex(nMatriz, mMatriz);
+	if (matrizMutex == NULL)
+	{
+		return -1;
+	}
+
+	//Se inicializan todos los mutex;
+	mutexInit();
+
+	if (matriz == NULL || matrizMutex == NULL )
+	{
+		return -1;
+	}
+
+	//Se crea el archivo de salida;
 	FILE* salida = fopen(sName, "w");
 	if (entrada == NULL)
 	{
@@ -508,13 +560,12 @@ int inicio(int argc, char **argv)
 		return -1;
 	}
 
-
+	//Se da memoria al arreglo de hebras
 	hebras = (Hebra*)malloc(sizeof(Hebra) * hCant);
 
 	palabrasPorProceso = cCant / hCant;
 
-	leerArchivo(entrada, cCant);
-	//printDiccionario(cCant);
+	//se asignan las palabras a cada hebra
 	if (asignarPalabras(entrada, cCant, palabrasPorProceso, hCant) == 1)
 	{
 		return -1;
@@ -522,7 +573,6 @@ int inicio(int argc, char **argv)
 
 
 	fclose(entrada);
-	//printPalabras(cCant, palabrasPorProceso, hCant);
 
 	;
 	int i;
@@ -531,6 +581,8 @@ int inicio(int argc, char **argv)
 
 	srand(time(NULL));
 
+
+	//Se empieza a escribir
 	for (i = 0; i < hCant; i++)
 	{
 
@@ -540,7 +592,7 @@ int inicio(int argc, char **argv)
 	}
 
 
-
+	//Se espera que termine de escribir cada hebra
 	for (i = 0; i < hCant; i++)
 	{
 		int err = pthread_join(id[i], NULL);
@@ -551,8 +603,10 @@ int inicio(int argc, char **argv)
 	{
 		printMatriz(matriz, nMatriz, mMatriz);
 	}
+	//Se escribe el archivo de salida
 	printMatrizArchivo(salida, matriz, N, M);
-
+	free(hebras);
+	freeMatrices();
 	printf("Fin programa\n");
 
 	return 0;
